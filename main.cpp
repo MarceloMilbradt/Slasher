@@ -1,80 +1,43 @@
 #include "raylib.h"
 #include "raymath.h"
-
-struct AnimData //struct que representa um objeto animavel
-{
-    Rectangle source; //hitbox da animacao
-    Rectangle dest;
-    Vector2 pos;       //posicao da hitbox
-    int frame;         //frame da animacao
-    float updateTime;  //intervalo de atualizacao da animacao (s)
-    float runningTime; //tempo que a animacao esta rodando
-    float maxFrames;   //maximos de frames da animacao
-};
-
-AnimData updateAnimation(AnimData data, float deltaT)
-{
-    //atualiza o running time
-    data.runningTime += deltaT;
-    if (data.runningTime >= data.updateTime)
-    {
-        data.runningTime = 0.0;
-        //atualiza o frame de animacao
-        data.source.x = data.frame * data.source.width;
-        data.frame++;
-        if (data.frame > data.maxFrames)
-        {
-            data.frame = 0;
-        }
-    }
-    return data;
-};
-
+#include "Character.h"
+#include "Prop.h"
 int main()
 {
     //dimencoes da window
-    const int windowDimensions[2] = {
-        526, //width
-        526, //height
-    };
+
+    const int windowWidth{520};
+    const int windowHeight{520};
+
     //abrir a window
-    InitWindow(windowDimensions[0], windowDimensions[1], "Slasher");
+    InitWindow(windowWidth, windowHeight, "Slasher");
 
     //-------MAPA------------
     Vector2 mapPos{0, 0};                                       // pos
-    const float mapSacale = 4.0f;                               // scale
-    Texture2D map = LoadTexture("nature_tileset/main-map.png"); //texture
+    Texture2D map = LoadTexture("nature_tileset/OpenWorldMap24x24.png"); //texture
+    const float mapScale = 4.f;
+
     //---------/MAPA----------
 
-    //--------PERSONAGEM---------
-    const float speed = 5.0f;
-    Texture2D knight = LoadTexture("characters/knight_idle_spritesheet.png"); //texture
-    Vector2 knightPos{
-        (float)windowDimensions[0] / 2.0f - mapSacale * (0.5f * (float)knight.width / 6.0f),
-        (float)windowDimensions[1] / 2.0f - mapSacale * (0.5f * (float)knight.height),
+    //-------Personagem-------
+    Character knight{
+        windowWidth,
+        windowHeight,
     };
-    AnimData knightData{
-        {
-            //rectangle(hitbox)
-            0.0f,                     // x
-            0.0f,                     // y
-            (float)knight.width / 6.0f, // width
-            (float)knight.height     // height
-        },
-        {},
-        {
-            //vector2(posicao)
-            (float)windowDimensions[0] / 2.0f - mapSacale * (0.5f * (float)knight.width / 6.0f),
-            (float)windowDimensions[1] / 2.0f - mapSacale * (0.5f * (float)knight.height),
+    //-------/Personagem-----
 
+    //-------Prop-------
+    Prop props[2]{
+        Prop{
+            Vector2{600.f, 300.f},
+            LoadTexture("nature_tileset/Rock.png"),
         },
-        0,        // frame
-        1.0f / 10.0f, //updateTime
-        0.0f,        // running time
-        6.0f,        //maximo de frames
+        Prop{
+            Vector2{400.f, 500.f},
+            LoadTexture("nature_tileset/Log.png"),
+        },
     };
-
-    //---------/PERSONAGEM-------
+    //-------/Prop-----
 
     //seta os frames a 60 fps
     SetTargetFPS(60);
@@ -83,36 +46,39 @@ int main()
         /* Pega o ∆T(delta T) (tempo desde o ultimo frame)
         *  garante que a aceleração será a mesma a cada frame, independente de framerate
         */
-        //const float dT = GetFrameTime();
+        const float dT = GetFrameTime();
 
         //começa a renderizar
         BeginDrawing();
         ClearBackground(WHITE);
 
-        Vector2 direction{0, 0};
-
-        if (IsKeyDown(KEY_A))
-            direction.x -= 1.0;
-        if (IsKeyDown(KEY_D))
-            direction.x += 1.0;
-        if (IsKeyDown(KEY_W))
-            direction.y -= 1.0;
-        if (IsKeyDown(KEY_S))
-            direction.y += 1.0;
-
-        if (Vector2Length(direction) != 0.0)
+        mapPos = Vector2Scale(knight.getWorldPos(), -1.f);
+        //Desenha o mapa
+        DrawTextureEx(map, mapPos, 0, mapScale, WHITE);
+        
+        
+        //Draw Props
+        for (auto prop : props)
         {
-            Vector2 newPos = Vector2Normalize(direction);
-            newPos = Vector2Scale(newPos, speed);
-            //set mapPos = mapPos - direction
-            mapPos = Vector2Subtract(mapPos, newPos);
+            prop.render(knight.getWorldPos());
         }
 
-        DrawTextureEx(map, mapPos, 0, mapSacale, WHITE);
+        knight.tick(dT);
+
+        //verifica limites do mapa
+        Vector2 worldPos = knight.getWorldPos();
+        if (worldPos.x < 0.f ||
+            worldPos.y < 0.f ||
+            worldPos.x > map.width * mapScale ||
+            worldPos.y > map.height * mapScale)
+        {
+            knight.undoMovement();
+        };
 
         //finaliza a renderizacao
         EndDrawing();
-    }
+    };
+
     UnloadTexture(map);
     CloseWindow();
 
