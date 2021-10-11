@@ -2,62 +2,95 @@
 #include "raymath.h"
 #include "raylib.h"
 
-Character::Character(int winWidth, int winHeight)
+Character::Character(int winWidth, int winHeight, Texture2D texIdle, Texture2D texRun) : windowWidth(winWidth),
+                                                                                         windowHeight(winHeight)
 {
 
-    screenPos = {
-        static_cast<float>(winWidth) / 2.0f - scale * (0.5f * width),
-        static_cast<float>(winHeight)  / 2.0f - scale * (0.5f * height),
-    };
+    texture = (texIdle);
+    textureIdle = (texIdle);
+    textureRun = (texRun);
 
     width = (float)texture.width / (float)maxFrames;
     height = (float)texture.height;
 }
 void Character::tick(float deltaTime)
 {
+
+    if (!getAlive())
+        return;
+
     worldPosLastFrame = worldPos;
 
-    Vector2 direction{0, 0};
     if (IsKeyDown(KEY_A))
-        direction.x -= 1.0;
+        velocity.x -= 1.0;
     if (IsKeyDown(KEY_D))
-        direction.x += 1.0;
+        velocity.x += 1.0;
     if (IsKeyDown(KEY_W))
-        direction.y -= 1.0;
+        velocity.y -= 1.0;
     if (IsKeyDown(KEY_S))
-        direction.y += 1.0;
+        velocity.y += 1.0;
 
-    if (Vector2Length(direction) != 0.0)
+    Actor::tick(deltaTime);
+    Vector2 origing{};
+    Vector2 offset{};
+
+    float rotation = 0;
+    if (rightLeft > 0.f)
     {
-        Vector2 newPos = Vector2Normalize(direction);
-        newPos = Vector2Scale(newPos, speed);
-        //set worldPos = worldPos + direction
-        worldPos = Vector2Add(worldPos, newPos);
+        origing.x = 0.f;
+        origing.y = weapon.height * scale;
+        offset.x = 45.f;
+        offset.y = 55.f;
 
-        rightLeft = direction.x < 0.f ? -1.f : 1.f;
-        texture = textureRun;
+        weaponHitBox.x = getScreenPos().x + offset.x;
+        weaponHitBox.y = getScreenPos().y + offset.y - weapon.height * scale;
+
+        weaponHitBox.height = weapon.height * scale;
+        weaponHitBox.width = weapon.width * scale;
+
+        rotation = IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? 35.f : 0.f;
     }
     else
     {
-        texture = textureIdle;
+        origing.x = weapon.width * scale;
+        origing.y = weapon.height * scale;
+        offset.x = 15.f;
+        offset.y = 55.f;
+
+        weaponHitBox.x = getScreenPos().x + offset.x - weapon.width * scale;
+        weaponHitBox.y = getScreenPos().y + offset.y - weapon.height * scale;
+
+        weaponHitBox.height = weapon.height * scale;
+        weaponHitBox.width = weapon.width * scale;
+
+        rotation = IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? -35.f : 0.f;
     }
 
-    //Update animation frame
-    runningTime += deltaTime;
-    if (runningTime >= updateTime)
-    {
-        frame++;
-        runningTime = 0.f;
-        if (frame > maxFrames)
-            frame = 0;
-    }
+    //desenha a espada
+    Rectangle source{0.f, 0.f, weapon.width * rightLeft, static_cast<float>(weapon.height)};
+    Rectangle destination{getScreenPos().x + offset.x, getScreenPos().y + offset.y, weapon.width * scale, weapon.height * scale};
+    DrawTexturePro(weapon, source, destination, origing, rotation, WHITE);
 
-    Rectangle source{width * frame, 0.f, rightLeft * width, height};
-    Rectangle dest{screenPos.x, screenPos.y, scale * width, scale * height};
-
-    DrawTexturePro(texture, source, dest, Vector2{}, 0.f, WHITE);
+    DrawRectangleLines(
+        weaponHitBox.x,
+        weaponHitBox.y,
+        weaponHitBox.width,
+        weaponHitBox.height,
+        RED);
 }
-void Character::undoMovement()
+Vector2 Character::getScreenPos()
 {
-    worldPos = worldPosLastFrame;
+    return Vector2{
+        windowWidth / 2.0f - scale * (0.5f * width),
+        windowHeight / 2.0f - scale * (0.5f * height),
+    };
+}
+
+void Character::takeDamage(float damage)
+{
+    health -= damage;
+    if (health <= 0.f)
+    {
+        setAlive(false);
+    }
 }

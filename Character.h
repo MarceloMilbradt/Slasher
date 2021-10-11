@@ -1,31 +1,24 @@
 #include "raylib.h"
+#include "Actor.h"
+#ifndef CHARACTER_H
+#define CHARACTER_H
 
-class Character
+class Character : public Actor
 {
 private:
-    Texture2D texture = LoadTexture("characters/knight_idle_spritesheet.png");
-    Texture2D textureIdle = LoadTexture("characters/knight_idle_spritesheet.png");
-    Texture2D textureRun = LoadTexture("characters/knight_run_spritesheet.png");
-    Vector2 screenPos{};
-    Vector2 worldPos{};
-    Vector2 worldPosLastFrame{};
-    // 1 -> direita -1 -> esquerda
-    float rightLeft = 1.f;
-    float runningTime = 0.f;
-    int frame = 0;
-    const int maxFrames = 6;
-    const float updateTime = 1.f / 12.f;
-    const float speed = 4.f;
-    
-    float width=0.f;
-    float height=0.f;
-    float scale=4.0f;
+    float windowWidth;
+    float windowHeight;
+
+    Texture2D weapon = LoadTexture("characters/weapon_sword.png");
+    Rectangle weaponHitBox = {};
+    float health = 100.f;
 public:
-    Character(int winWidth, int winHeight);
-    Vector2 getWorldPos()
-    {
-        return worldPos;
-    };
-    void tick(float deltaTime);
-    void undoMovement();
+    Character(int winWidth, int winHeight, Texture2D texIdle, Texture2D texRun);
+    virtual void tick(float deltaTime) override;
+    virtual Vector2 getScreenPos() override;
+    Rectangle getWeaponHitBox() const { return weaponHitBox; };
+    float getHealth() const { return health; };
+    void takeDamage(float damage);
+
 };
+#endif
